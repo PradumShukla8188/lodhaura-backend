@@ -18,20 +18,21 @@ db.connect();
 
 app.use(helmet());
 
-const corsOptions = {
-    origin: (origin, callback) => {
-        const allowed = config.env.allowedOrigins;
-        if (!origin || allowed.includes('*') || allowed.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-};
-app.use(cors(corsOptions));
+// const corsOptions = {
+//     origin: (origin, callback) => {
+//         const allowed = config.env.allowedOrigins;
+//         if (!origin || allowed.includes('*') || allowed.includes(origin)) {
+//             callback(null, true);
+//         } else {
+//             callback(new Error('Not allowed by CORS'));
+//         }
+//     },
+//     credentials: true,
+//     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+//     allowedHeaders: ['Content-Type', 'Authorization'],
+// };
+// app.use(cors(corsOptions));
+app.use(cors({ origin: '*' }));
 
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -62,14 +63,14 @@ app.get('/api-docs.json', (req, res) => {
 
 app.use('/api/v1', indexRouter);
 
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
     if (req.path.startsWith('/api/')) {
         return res.status(404).json({ message: 'API route not found' });
     }
     next(createError(404));
 });
 
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
     if (req.path.startsWith('/api/')) {
         return res.status(err.status || 500).json({ message: err.message || 'Internal server error' });
     }

@@ -11,6 +11,23 @@ const RoleSchema = new mongoose.Schema({
         required: true,
         trim:true
     },
+    code: {
+        type: String,
+        trim: true,
+    },
+    description: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    department: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Department'
+    },
+    permissions: [{
+        module: { type: String, required: true },
+        action: { type: String, required: true }
+    }],
     status: {
         type: String,
         enum: ['active', 'inactive'],

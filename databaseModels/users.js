@@ -63,6 +63,22 @@ const UserSchema = new mongoose.Schema({
         ref: 'Role',
         required: true,
     },
+    additionalRoles: [{
+        type: mongoose.Types.ObjectId,
+        ref: 'Role',
+    }],
+    department: {
+        type: mongoose.Types.ObjectId,
+        ref: 'Department',
+    },
+    designation: {
+        type: String,
+        trim: true,
+    },
+    employeeId: {
+        type: String,
+        trim: true,
+    },
     status: {
         type: String,
         enum: ['active', 'inactive'],

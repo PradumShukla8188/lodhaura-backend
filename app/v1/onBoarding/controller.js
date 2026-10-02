@@ -56,7 +56,9 @@ module.exports = {
         try {
             const { email, password } = req.body;
             const lowerEmail = email.toLowerCase();
-            const user = await UserModel.findOne({ email: lowerEmail }).populate('roleId');
+            const user = await UserModel.findOne({ email: lowerEmail })
+                .populate('roleId')
+                .populate('additionalRoles');
             if (!user) {
                 return res.status(400).send({ message: 'User not found.' });
             }

@@ -7,6 +7,8 @@ const { VideoModel } = require('../../../databaseModels/video');
 const { ReportModel } = require('../../../databaseModels/report');
 const { DonationModel } = require('../../../databaseModels/donation');
 const { ContactModel } = require('../../../databaseModels/contact');
+const { LocalServiceModel } = require('../../../databaseModels/localService');
+const { AgricultureServiceModel } = require('../../../databaseModels/agricultureService');
 
 module.exports = {
     getDashboardStats: async (req, res) => {
@@ -32,14 +34,16 @@ module.exports = {
 
     getPendingContent: async (req, res) => {
         try {
-            const [blogs, news, events] = await Promise.all([
+            const [blogs, news, events, localServices, agricultureServices] = await Promise.all([
                 BlogModel.find({ status: 'pending', isDeleted: false }).populate('userId', 'name email'),
                 NewsModel.find({ status: 'pending', isDeleted: false }).populate('userId', 'name email'),
                 EventModel.find({ status: 'pending', isDeleted: false }).populate('userId', 'name email'),
+                LocalServiceModel.find({ verificationStatus: 'pending', isDeleted: false }).populate('userId', 'name email'),
+                AgricultureServiceModel.find({ verificationStatus: 'pending', isDeleted: false }).populate('userId', 'name email'),
             ]);
             return res.status(200).send({
                 message: 'Pending content fetched successfully.',
-                data: { blogs, news, events },
+                data: { blogs, news, events, localServices, agricultureServices },
             });
         } catch (err) {
             console.log('getPendingContent err', err?.message || err);
@@ -50,12 +54,18 @@ module.exports = {
     approveContent: async (req, res) => {
         try {
             const { type, id } = req.params;
-            const models = { blog: BlogModel, news: NewsModel, event: EventModel, image: ImageModel, video: VideoModel };
+            const models = { blog: BlogModel, news: NewsModel, event: EventModel, image: ImageModel, video: VideoModel, localService: LocalServiceModel, agricultureService: AgricultureServiceModel };
             const Model = models[type];
             if (!Model) return res.status(400).send({ message: 'Invalid content type.' });
             const doc = await Model.findById(id);
             if (!doc) return res.status(404).send({ message: 'Content not found.' });
-            doc.status = 'approved';
+            
+            if (type === 'localService' || type === 'agricultureService') {
+                doc.verificationStatus = 'approved';
+            } else {
+                doc.status = 'approved';
+            }
+            
             await doc.save();
             return res.status(200).send({ message: 'Content approved successfully.', data: doc });
         } catch (err) {
@@ -68,16 +78,22 @@ module.exports = {
         try {
             const { type, id } = req.params;
             const { status } = req.body;
-            const allowed = ['pending', 'approved', 'inactive', 'active'];
+            const allowed = ['pending', 'approved', 'inactive', 'active', 'rejected'];
             if (!allowed.includes(status)) {
                 return res.status(400).send({ message: 'Invalid status value.' });
             }
-            const models = { blog: BlogModel, news: NewsModel, event: EventModel, image: ImageModel, video: VideoModel };
+            const models = { blog: BlogModel, news: NewsModel, event: EventModel, image: ImageModel, video: VideoModel, localService: LocalServiceModel, agricultureService: AgricultureServiceModel };
             const Model = models[type];
             if (!Model) return res.status(400).send({ message: 'Invalid content type.' });
             const doc = await Model.findById(id);
             if (!doc) return res.status(404).send({ message: 'Content not found.' });
-            doc.status = status;
+            
+            if (type === 'localService' || type === 'agricultureService') {
+                doc.verificationStatus = status;
+            } else {
+                doc.status = status;
+            }
+            
             await doc.save();
             return res.status(200).send({ message: 'Content status updated.', data: doc });
         } catch (err) {

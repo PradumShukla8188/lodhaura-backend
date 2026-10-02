@@ -28,10 +28,10 @@ module.exports = {
 
     createScheme: async (req, res) => {
         try {
-            const { title, description, eligibility, benefits, applicationProcess, featuredImage, category, startDate, endDate } = req.body;
+            const { title, description, eligibility, benefits, applicationProcess, featuredImage, category, department, level, officialWebsite, applicableVillage, responsibleOfficer, startDate, endDate } = req.body;
             const slug = slugify(title) + '-' + Date.now();
             const scheme = await SchemeModel.create({
-                title, slug, description, eligibility, benefits, applicationProcess, featuredImage, category, startDate, endDate,
+                title, slug, description, eligibility, benefits, applicationProcess, featuredImage, category, department, level, officialWebsite, applicableVillage, responsibleOfficer, startDate, endDate,
             });
             return res.status(201).send({ message: 'Scheme created successfully.', data: scheme });
         } catch (err) {
@@ -44,7 +44,7 @@ module.exports = {
         try {
             const scheme = await SchemeModel.findById(req.params.id);
             if (!scheme) return res.status(404).send({ message: 'Scheme not found.' });
-            const fields = ['title', 'description', 'eligibility', 'benefits', 'applicationProcess', 'featuredImage', 'category', 'startDate', 'endDate', 'status'];
+            const fields = ['title', 'description', 'eligibility', 'benefits', 'applicationProcess', 'featuredImage', 'category', 'department', 'level', 'officialWebsite', 'applicableVillage', 'responsibleOfficer', 'startDate', 'endDate', 'status'];
             fields.forEach((f) => { if (req.body[f] !== undefined) scheme[f] = req.body[f]; });
             if (req.body.title) scheme.slug = slugify(req.body.title) + '-' + Date.now();
             await scheme.save();

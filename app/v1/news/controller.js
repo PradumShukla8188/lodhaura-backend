@@ -33,7 +33,7 @@ module.exports = {
 
     createNews: async (req, res) => {
         try {
-            const { title, content, summary, featuredImage, category, tags } = req.body;
+            const { title, content, summary, featuredImage, category, tags, priority, attachments, expiryDate } = req.body;
             const slug = slugify(title) + '-' + Date.now();
             const news = await NewsModel.create({
                 title,
@@ -43,6 +43,9 @@ module.exports = {
                 featuredImage,
                 category,
                 tags,
+                priority,
+                attachments,
+                expiryDate,
                 userId: req.user._id,
             });
             return res.status(201).send({ message: 'News created successfully.', data: news });
@@ -56,7 +59,7 @@ module.exports = {
         try {
             const news = await NewsModel.findById(req.params.id);
             if (!news) return res.status(404).send({ message: 'News not found.' });
-            const fields = ['title', 'content', 'summary', 'featuredImage', 'category', 'tags', 'status'];
+            const fields = ['title', 'content', 'summary', 'featuredImage', 'category', 'tags', 'status', 'priority', 'attachments', 'expiryDate'];
             fields.forEach((f) => { if (req.body[f] !== undefined) news[f] = req.body[f]; });
             if (req.body.title) news.slug = slugify(req.body.title) + '-' + Date.now();
             await news.save();

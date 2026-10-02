@@ -18,7 +18,9 @@ module.exports = {
         try {
             const userId = req.user._id;
             const [user, blogsCount, imagesCount, videosCount, blogs, images, videos] = await Promise.all([
-                UserModel.findById(userId).select('-password -refreshToken -resetPasswordToken').populate('roleId'),
+                UserModel.findById(userId).select('-password -refreshToken -resetPasswordToken')
+                    .populate('roleId')
+                    .populate('additionalRoles'),
                 BlogModel.countDocuments({ userId, isDeleted: false }),
                 ImageModel.countDocuments({ userId, isDeleted: false }),
                 VideoModel.countDocuments({ userId, isDeleted: false }),
@@ -59,7 +61,8 @@ module.exports = {
             await user.save();
             const updated = await UserModel.findById(user._id)
                 .select('-password -refreshToken -resetPasswordToken')
-                .populate('roleId');
+                .populate('roleId')
+                .populate('additionalRoles');
 
             return res.status(200).send({
                 message: 'Profile updated successfully.',

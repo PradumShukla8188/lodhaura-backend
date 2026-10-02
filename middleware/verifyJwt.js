@@ -16,7 +16,10 @@ module.exports = {
             if (!decoded) {
                 return res.status(401).json({ message: 'Invalid token' });
             }
-            const user = await UserModel.findById(decoded.id).populate('roleId');
+            const user = await UserModel.findById(decoded.id)
+                .populate('roleId')
+                .populate('additionalRoles')
+                .populate('department');
             if (!user) {
                 return res.status(401).json({ message: 'User not found' });
             }

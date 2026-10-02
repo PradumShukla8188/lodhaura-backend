@@ -9,9 +9,15 @@ const SchemeSchema = new mongoose.Schema({
     applicationProcess: { type: String, default: '' },
     featuredImage: { type: String, default: '' },
     category: { type: mongoose.Types.ObjectId, ref: 'Category' },
+    department: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
+    level: { type: String, enum: ['Central', 'State', 'Local'], default: 'State' },
     startDate: { type: Date },
     endDate: { type: Date },
-    status: { type: String, enum: ['active', 'inactive', 'expired'], default: 'active' },
+    officialWebsite: { type: String, trim: true },
+    officialDocuments: [{ title: String, url: String }],
+    applicableVillage: { type: String, trim: true },
+    responsibleOfficer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    status: { type: String, enum: ['active', 'inactive', 'upcoming', 'closed'], default: 'active' },
     isDeleted: { type: Boolean, default: false },
 }, { timestamps: true });
 
