@@ -6,8 +6,8 @@ const { checkPermission } = require('../../../middleware/checkPermission');
 const { isAdmin } = require('../../../middleware/isAdmin');
 
 router.get('/', verifyTokenMiddleware, controller.getDepartments);
-router.post('/', verifyTokenMiddleware, isAdmin, controller.createDepartment);
-router.put('/:id', verifyTokenMiddleware, isAdmin, controller.updateDepartment);
-router.delete('/:id', verifyTokenMiddleware, isAdmin, controller.deleteDepartment);
+router.post('/', verifyTokenMiddleware, checkPermission('Departments', 'Create'), controller.createDepartment);
+router.put('/:id', verifyTokenMiddleware, checkPermission('Departments', 'Edit'), controller.updateDepartment);
+router.delete('/:id', verifyTokenMiddleware, checkPermission('Departments', 'Delete'), controller.deleteDepartment);
 
 module.exports = router;

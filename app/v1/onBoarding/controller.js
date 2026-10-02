@@ -3,6 +3,7 @@ const { UserModel } = require('../../../databaseModels/users');
 const { hashPassword, comparePassword } = require('../../../helper/bcrypt');
 const { generateToken, generateRefreshToken, verifyRefreshToken } = require('../../../helper/jwt');
 const { RoleModel } = require('../../../databaseModels/role');
+const { ResidentProfileModel } = require('../../../databaseModels/residentProfile');
 const { Roles } = require('../../../constants/roles');
 const { sendPasswordResetEmail } = require('../../../helper/mailer');
 
@@ -48,6 +49,70 @@ module.exports = {
             });
         } catch (err) {
             console.log('register err', err?.message || err);
+            return res.status(500).send({ message: err?.message || 'Internal server error.' });
+        }
+    },
+
+    registerResident: async (req, res) => {
+        try {
+            const { 
+                name, email, password, phone,
+                dateOfBirth, gender, maritalStatus, occupation, educationLevel,
+                houseNumber, street, village, postOffice, district, state, pincode,
+                familyHeadName, emergencyContact 
+            } = req.body;
+            
+            // For residents without email, we might want to check by phone
+            // But since email might be optional, let's handle uniqueness
+            let lowerEmail = email ? email.toLowerCase() : undefined;
+            if (lowerEmail) {
+                const userExists = await UserModel.findOne({ email: lowerEmail });
+                if (userExists) return res.status(400).send({ message: 'User already exists with this email.' });
+            }
+            
+            // We should also ensure phone is unique if used for login (Assuming they can login with email currently)
+            // Wait, existing login uses email. If email is optional, we might need a dummy email or enforce it.
+            // Let's enforce email for now or generate a dummy one if absent for the UserModel
+            if (!lowerEmail) {
+                lowerEmail = `${phone}@lodhaura.local`; 
+            } else {
+                const userExists = await UserModel.findOne({ email: lowerEmail });
+                if (userExists) return res.status(400).send({ message: 'User already exists with this email.' });
+            }
+
+            const role = await RoleModel.findOne({ name: Roles.User.name });
+            if (!role) {
+                return res.status(400).send({ message: 'User role not found.' });
+            }
+
+            const user = await UserModel.create({
+                name,
+                email: lowerEmail,
+                phone: phone,
+                password: await hashPassword(password),
+                roleId: role._id,
+            });
+
+            const residentProfile = await ResidentProfileModel.create({
+                userId: user._id,
+                dateOfBirth, gender, maritalStatus, occupation, educationLevel,
+                houseNumber, street, village, postOffice, district, state, pincode,
+                familyHeadName, emergencyContact
+            });
+
+            const userResponse = await UserModel.findById(user._id)
+                .select('-password -refreshToken -resetPasswordToken')
+                .populate('roleId');
+
+            return res.status(201).send({
+                message: 'Resident registered successfully.',
+                data: {
+                    user: userResponse,
+                    residentProfile
+                },
+            });
+        } catch (err) {
+            console.log('registerResident err', err?.message || err);
             return res.status(500).send({ message: err?.message || 'Internal server error.' });
         }
     },

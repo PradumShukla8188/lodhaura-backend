@@ -5,11 +5,13 @@ const { createAdminUser } = require('./admin');
 const { createUsers } = require('./user');
 const { createBlogs } = require('./blog');
 const { seedVillageInfo, seedCategories, seedSampleData } = require('./village');
+const { seedRoles } = require('./seedRoles');
 
 async function seedDatabase() {
     try {
         await DB.connect();
         await createRoles();
+        await seedRoles();
         await createAdminUser();
         await createUsers();
         await createBlogs();

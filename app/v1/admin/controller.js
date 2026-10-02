@@ -104,11 +104,40 @@ module.exports = {
 
     getAllUsersAdmin: async (req, res) => {
         try {
-            const users = await UserModel.find({ isDeleted: false })
-                .select('-password -refreshToken -resetPasswordToken')
-                .populate('roleId', 'name displayValue')
-                .sort({ createdAt: -1 });
-            return res.status(200).send({ message: 'Users fetched successfully.', data: users });
+            const { page = 1, limit = 20, search = '' } = req.query;
+            const query = { isDeleted: false };
+            if (search) {
+                query.$or = [
+                    { name: { $regex: search, $options: 'i' } },
+                    { email: { $regex: search, $options: 'i' } },
+                    { phone: { $regex: search, $options: 'i' } }
+                ];
+            }
+
+            const skip = (Number(page) - 1) * Number(limit);
+            
+            const [users, total] = await Promise.all([
+                UserModel.find(query)
+                    .select('-password -refreshToken -resetPasswordToken')
+                    .populate('roleId', 'name displayValue')
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(Number(limit)),
+                UserModel.countDocuments(query)
+            ]);
+
+            return res.status(200).send({ 
+                message: 'Users fetched successfully.', 
+                data: users,
+                pagination: {
+                    page: Number(page),
+                    limit: Number(limit),
+                    totalRecords: total,
+                    totalPages: Math.ceil(total / Number(limit)),
+                    hasNextPage: skip + Number(limit) < total,
+                    hasPreviousPage: Number(page) > 1
+                }
+            });
         } catch (err) {
             console.log('getAllUsersAdmin err', err?.message || err);
             return res.status(500).send({ message: err?.message || 'Internal server error.' });

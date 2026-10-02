@@ -8,14 +8,14 @@ const {
     deleteUserValidator
 } = require('./validator');
 const { verifyTokenMiddleware } = require('../../../middleware/verifyJwt');
-const { isAdmin } = require('../../../middleware/isAdmin');
+const { checkPermission } = require('../../../middleware/checkPermission');
 
-router.use(verifyTokenMiddleware, isAdmin);
+router.use(verifyTokenMiddleware);
 
-router.get('/', controller.getAllUsers);
-router.get('/:id', getUserByIdValidator, controller.getUserById);
-router.post('/', createUserValidator, controller.createUser);
-router.patch('/:id', updateUserValidator, controller.updateUser);
-router.delete('/:id', deleteUserValidator, controller.deleteUser);
+router.get('/', checkPermission('users', 'view'), controller.getAllUsers);
+router.get('/:id', checkPermission('users', 'view'), getUserByIdValidator, controller.getUserById);
+router.post('/', checkPermission('users', 'create'), createUserValidator, controller.createUser);
+router.patch('/:id', checkPermission('users', 'edit'), updateUserValidator, controller.updateUser);
+router.delete('/:id', checkPermission('users', 'delete'), deleteUserValidator, controller.deleteUser);
 
 module.exports = router;

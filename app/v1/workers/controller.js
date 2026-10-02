@@ -111,5 +111,71 @@ module.exports = {
         } catch (err) {
             return res.status(500).send({ message: err?.message || 'Internal server error.' });
         }
+    },
+
+    // Admin functions
+    getAdminWorkers: async (req, res) => {
+        try {
+            const { page = 1, limit = 20, search = '' } = req.query;
+            const query = { isDeleted: false };
+            if (search) {
+                query.$or = [
+                    { name: { $regex: search, $options: 'i' } },
+                    { skills: { $regex: search, $options: 'i' } },
+                    { category: { $regex: search, $options: 'i' } }
+                ];
+            }
+
+            const skip = (Number(page) - 1) * Number(limit);
+            
+            const [workers, total] = await Promise.all([
+                WorkerModel.find(query)
+                    .populate('userId', 'avatar name email')
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(Number(limit)),
+                WorkerModel.countDocuments(query)
+            ]);
+
+            return res.status(200).json({ 
+                success: true, 
+                data: workers,
+                pagination: {
+                    page: Number(page),
+                    limit: Number(limit),
+                    totalRecords: total,
+                    totalPages: Math.ceil(total / Number(limit)),
+                    hasNextPage: skip + Number(limit) < total,
+                    hasPreviousPage: Number(page) > 1
+                }
+            });
+        } catch (err) {
+            return res.status(500).send({ success: false, message: 'Internal server error.' });
+        }
+    },
+
+    verifyWorker: async (req, res) => {
+        try {
+            const { isVerified } = req.body;
+            const worker = await WorkerModel.findByIdAndUpdate(
+                req.params.id, 
+                { isVerified },
+                { new: true }
+            );
+            if (!worker) return res.status(404).send({ success: false, message: 'Not found' });
+            return res.status(200).send({ success: true, message: 'Worker verification updated', data: worker });
+        } catch (err) {
+            return res.status(500).send({ success: false, message: err?.message || 'Error' });
+        }
+    },
+
+    deleteWorker: async (req, res) => {
+        try {
+            const worker = await WorkerModel.findByIdAndUpdate(req.params.id, { isDeleted: true });
+            if (!worker) return res.status(404).send({ success: false, message: 'Not found' });
+            return res.status(200).send({ success: true, message: 'Worker deleted successfully' });
+        } catch (err) {
+            return res.status(500).send({ success: false, message: err?.message || 'Error' });
+        }
     }
 };

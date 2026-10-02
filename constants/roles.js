@@ -1,4 +1,8 @@
 const Roles = {
+    SuperAdmin: {
+        name: 'super_admin',
+        displayValue: 'Super Admin',
+    },
     Admin: {
         name: 'admin',
         displayValue: 'Admin',

@@ -1,9 +1,41 @@
 const { RoleModel } = require('../../../databaseModels/role');
 
+const { Roles } = require('../../../constants/roles');
+
 const getRoles = async (req, res) => {
     try {
-        const roles = await RoleModel.find({ isDeleted: false }).populate('department').sort({ createdAt: -1 });
-        return res.status(200).json({ success: true, data: roles });
+        const { page = 1, limit = 20, search = '' } = req.query;
+        const query = { isDeleted: false };
+        if (search) {
+            query.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { displayValue: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const skip = (Number(page) - 1) * Number(limit);
+        
+        const [roles, total] = await Promise.all([
+            RoleModel.find(query)
+                .populate('department')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(Number(limit)),
+            RoleModel.countDocuments(query)
+        ]);
+
+        return res.status(200).json({ 
+            success: true, 
+            data: roles,
+            pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                totalRecords: total,
+                totalPages: Math.ceil(total / Number(limit)),
+                hasNextPage: skip + Number(limit) < total,
+                hasPreviousPage: Number(page) > 1
+            }
+        });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
     }
@@ -41,6 +73,11 @@ const updateRole = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Role not found' });
         }
 
+        // Protect SuperAdmin from being edited by non-SuperAdmin
+        if (role.name === Roles.SuperAdmin.name && req.user.roleId.name !== Roles.SuperAdmin.name) {
+            return res.status(403).json({ success: false, message: 'Cannot modify Super Admin role' });
+        }
+
         if (name) role.name = name;
         if (displayValue) role.displayValue = displayValue;
         if (code !== undefined) role.code = code;
@@ -64,9 +101,10 @@ const deleteRole = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Role not found' });
         }
 
-        // Check if Admin role is being deleted
-        if (role.name === 'Admin') {
-            return res.status(400).json({ success: false, message: 'Cannot delete the Admin role' });
+        // Prevent deletion of core roles
+        const coreRoles = [Roles.SuperAdmin.name, Roles.Admin.name, Roles.User.name];
+        if (coreRoles.includes(role.name)) {
+            return res.status(400).json({ success: false, message: `Cannot delete the core role: ${role.displayValue}` });
         }
 
         role.isDeleted = true;

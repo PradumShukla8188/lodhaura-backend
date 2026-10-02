@@ -7,8 +7,9 @@ const { checkPermission } = require('../../../middleware/checkPermission');
 router.get('/', controller.getAllEmergencyContacts);
 
 // Admin routes
-router.post('/', verifyTokenMiddleware, checkPermission('Village Directory', 'Add'), controller.createEmergencyContact);
-router.put('/:id', verifyTokenMiddleware, checkPermission('Village Directory', 'Edit'), controller.updateEmergencyContact);
-router.delete('/:id', verifyTokenMiddleware, checkPermission('Village Directory', 'Delete'), controller.deleteEmergencyContact);
+router.get('/admin', verifyTokenMiddleware, checkPermission('Emergency Contacts', 'view'), controller.getAdminEmergencyContacts);
+router.post('/', verifyTokenMiddleware, checkPermission('Emergency Contacts', 'create'), controller.createEmergencyContact);
+router.put('/:id', verifyTokenMiddleware, checkPermission('Emergency Contacts', 'edit'), controller.updateEmergencyContact);
+router.delete('/:id', verifyTokenMiddleware, checkPermission('Emergency Contacts', 'delete'), controller.deleteEmergencyContact);
 
 module.exports = router;

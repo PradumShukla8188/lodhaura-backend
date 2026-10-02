@@ -42,6 +42,7 @@ const auditRouter = require('../app/v1/audit/router');
 const tasksRouter = require('../app/v1/tasks/router');
 const meetingsRouter = require('../app/v1/meetings/router');
 const analyticsRouter = require('../app/v1/analytics/router');
+const residentsRouter = require('../app/v1/residents/router');
 
 router.use('/onBoarding', onBoardingRouter);
 router.use('/blog', blogRouter);
@@ -85,5 +86,6 @@ router.use('/audit', auditRouter);
 router.use('/tasks', tasksRouter);
 router.use('/meetings', meetingsRouter);
 router.use('/analytics', analyticsRouter);
+router.use('/residents', residentsRouter);
 
 module.exports = router;

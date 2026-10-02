@@ -13,4 +13,10 @@ router.post('/register', controller.registerWorker);
 router.get('/profile/me', controller.getMyProfile);
 router.patch('/profile/me', controller.updateProfile);
 
+// Admin routes
+const { checkPermission } = require('../../../middleware/checkPermission');
+router.get('/admin', checkPermission('Workers', 'view'), controller.getAdminWorkers);
+router.patch('/admin/:id/verify', checkPermission('Workers', 'approve'), controller.verifyWorker);
+router.delete('/admin/:id', checkPermission('Workers', 'delete'), controller.deleteWorker);
+
 module.exports = router;

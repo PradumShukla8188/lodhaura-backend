@@ -21,6 +21,8 @@ const extractTokenOptional = (req, res, next) => {
 router.post('/', extractTokenOptional, controller.registerLocalService);
 
 // Admin route
-router.patch('/:id/status', verifyTokenMiddleware, checkPermission('Village Directory', 'Edit'), controller.updateLocalServiceStatus);
+router.get('/admin', verifyTokenMiddleware, checkPermission('Local Services', 'view'), controller.getAdminLocalServices);
+router.patch('/admin/:id/status', verifyTokenMiddleware, checkPermission('Local Services', 'approve'), controller.updateLocalServiceStatusAdmin);
+router.delete('/admin/:id', verifyTokenMiddleware, checkPermission('Local Services', 'delete'), controller.deleteLocalServiceAdmin);
 
 module.exports = router;

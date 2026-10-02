@@ -6,10 +6,39 @@ const { hashPassword } = require('../../../helper/bcrypt');
 module.exports = {
     getAllUsers: async (req, res) => {
         try {
-            const users = await UserModel.find()
-                .select('-password')
-                .populate('roleId', 'name displayValue');
-            return res.status(200).send({ message: 'Users fetched successfully.', data: users });
+            const { page = 1, limit = 20, search = '' } = req.query;
+            const query = { isDeleted: false };
+            if (search) {
+                query.$or = [
+                    { name: { $regex: search, $options: 'i' } },
+                    { email: { $regex: search, $options: 'i' } }
+                ];
+            }
+
+            const skip = (Number(page) - 1) * Number(limit);
+            
+            const [users, total] = await Promise.all([
+                UserModel.find(query)
+                    .select('-password')
+                    .populate('roleId', 'name displayValue')
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(Number(limit)),
+                UserModel.countDocuments(query)
+            ]);
+
+            return res.status(200).send({ 
+                message: 'Users fetched successfully.', 
+                data: users,
+                pagination: {
+                    page: Number(page),
+                    limit: Number(limit),
+                    totalRecords: total,
+                    totalPages: Math.ceil(total / Number(limit)),
+                    hasNextPage: skip + Number(limit) < total,
+                    hasPreviousPage: Number(page) > 1
+                }
+            });
         } catch (err) {
             console.log('getAllUsers err', err?.message || err);
             return res.status(500).send({ message: err?.message || 'Internal server error.' });
@@ -34,24 +63,33 @@ module.exports = {
 
     createUser: async (req, res) => {
         try {
-            const { name, email, password, role } = req.body;
+            const { name, email, password, roleId } = req.body;
             const lowerEmail = email.toLowerCase();
             const userExists = await UserModel.findOne({ email: lowerEmail });
             if (userExists) {
                 return res.status(400).send({ message: 'User already exists with this email.' });
             }
 
-            const roleName = role === 'admin' ? Roles.Admin.name : Roles.User.name;
-            const roleDoc = await RoleModel.findOne({ name: roleName });
-            if (!roleDoc) {
-                return res.status(400).send({ message: 'Role not found.' });
+            let finalRoleId = roleId;
+            if (!finalRoleId) {
+                // fallback to User role
+                const defaultRole = await RoleModel.findOne({ name: Roles.User.name });
+                if (defaultRole) finalRoleId = defaultRole._id;
+            } else {
+                const roleDoc = await RoleModel.findById(finalRoleId);
+                if (!roleDoc) {
+                    return res.status(400).send({ message: 'Role not found.' });
+                }
+                if (roleDoc.name === Roles.SuperAdmin.name && req.user.roleId.name !== Roles.SuperAdmin.name) {
+                     return res.status(403).send({ message: 'Only Super Admins can create Super Admins.' });
+                }
             }
 
             const user = await UserModel.create({
                 name,
                 email: lowerEmail,
                 password: await hashPassword(password),
-                roleId: roleDoc._id,
+                roleId: finalRoleId,
             });
 
             const userResponse = await UserModel.findById(user._id)
@@ -68,10 +106,14 @@ module.exports = {
     updateUser: async (req, res) => {
         try {
             const { id } = req.params;
-            const { name, email, password, role } = req.body;
-            const user = await UserModel.findById(id);
-            if (!user) {
+            const { name, email, password, roleId } = req.body;
+            const user = await UserModel.findById(id).populate('roleId');
+            if (!user || user.isDeleted) {
                 return res.status(404).send({ message: 'User not found.' });
+            }
+
+            if (user.roleId && user.roleId.name === Roles.SuperAdmin.name && req.user.roleId.name !== Roles.SuperAdmin.name) {
+                return res.status(403).send({ message: 'Cannot modify a Super Admin account.' });
             }
 
             if (name) user.name = name;
@@ -86,11 +128,13 @@ module.exports = {
             if (password) {
                 user.password = await hashPassword(password);
             }
-            if (role) {
-                const roleName = role === 'admin' ? Roles.Admin.name : Roles.User.name;
-                const roleDoc = await RoleModel.findOne({ name: roleName });
+            if (roleId) {
+                const roleDoc = await RoleModel.findById(roleId);
                 if (!roleDoc) {
                     return res.status(400).send({ message: 'Role not found.' });
+                }
+                if (roleDoc.name === Roles.SuperAdmin.name && req.user.roleId.name !== Roles.SuperAdmin.name) {
+                     return res.status(403).send({ message: 'Only Super Admins can assign the Super Admin role.' });
                 }
                 user.roleId = roleDoc._id;
             }
@@ -113,10 +157,19 @@ module.exports = {
             if (req.user._id.toString() === id) {
                 return res.status(400).send({ message: 'Cannot delete your own account.' });
             }
-            const user = await UserModel.findByIdAndDelete(id);
-            if (!user) {
+            
+            const user = await UserModel.findById(id).populate('roleId');
+            if (!user || user.isDeleted) {
                 return res.status(404).send({ message: 'User not found.' });
             }
+
+            if (user.roleId && user.roleId.name === Roles.SuperAdmin.name) {
+                 return res.status(403).send({ message: 'Cannot delete a Super Admin account.' });
+            }
+
+            user.isDeleted = true;
+            await user.save();
+            
             return res.status(200).send({ message: 'User deleted successfully.' });
         } catch (err) {
             console.log('deleteUser err', err?.message || err);

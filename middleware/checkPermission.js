@@ -8,8 +8,8 @@ const checkPermission = (moduleName, actionName) => {
                 return res.status(401).json({ message: 'Unauthorized access.' });
             }
 
-            // Super admin check
-            if (user.roleId.name === Roles.Admin.name) {
+            // Super admin bypasses all checks
+            if (user.roleId.name === Roles.SuperAdmin.name) {
                 return next();
             }
 
@@ -20,12 +20,15 @@ const checkPermission = (moduleName, actionName) => {
             }
 
             let hasPermission = false;
+            const targetModule = moduleName.toLowerCase();
+            const targetAction = actionName.toLowerCase();
+
             for (const role of allRoles) {
                 if (role && role.permissions && Array.isArray(role.permissions)) {
                     // Check if role has 'ALL'/'ALL' or the specific module/action
                     const hasModuleAction = role.permissions.some(
-                        p => (p.module === 'ALL' || p.module === moduleName) && 
-                             (p.action === 'ALL' || p.action === actionName)
+                        p => (p.module === 'ALL' || p.module?.toLowerCase() === targetModule) && 
+                             (p.action === 'ALL' || p.action?.toLowerCase() === targetAction)
                     );
                     if (hasModuleAction) {
                         hasPermission = true;
